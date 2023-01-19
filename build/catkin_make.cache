@@ -1,0 +1,2 @@
+adam_thesis:file_server:unity_simulation_scene
+-DCATKIN_DEVEL_PREFIX=/home/corelab/adam_folder/HonorsThesisROSWorkspace/devel -DCMAKE_INSTALL_PREFIX=/home/corelab/adam_folder/HonorsThesisROSWorkspace/install -G Unix Makefiles

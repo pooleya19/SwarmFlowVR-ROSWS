@@ -1,0 +1,8 @@
+prefix=/home/corelab/adam_folder/HonorsThesisROSWorkspace/install
+
+Name: adam_thesis
+Description: Description of adam_thesis
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 
