@@ -49,7 +49,7 @@ def waitForPoseData():
 def waypointMove(pub_RosbotVel, targetWaypoint):
 	turnSpeed = 2
 	moveSpeed = 0.5
-	maxAngleOffset = 15 * math.pi/180 # radians
+	maxAngleOffset = 0 #15 * math.pi/180 # radians
 	maxLinearOffset = 0.2 #m?
 
 	twistZero = Twist(Vector3(0,0,0),Vector3(0,0,0))
@@ -63,41 +63,42 @@ def waypointMove(pub_RosbotVel, targetWaypoint):
 	yaw = (yaw+2*math.pi) % (2*math.pi)
 	#rospy.loginfo("RPY: (%.3f, %.3f, %.3f)", roll, pitch, yaw)
 
-	targetAngle = math.atan2(targetWaypoint.y, targetWaypoint.x)
+	posOffset = Vector3(targetWaypoint.x - position.x, targetWaypoint.y - position.y, targetWaypoint.z - position.z)
+
+	targetAngle = math.atan2(posOffset.y, posOffset.x)
 	targetAngle = (targetAngle+2*math.pi) % (2*math.pi)
 
 	angleDiff = targetAngle - yaw
 	angleDiff = ((angleDiff + math.pi) % (2*math.pi)) - math.pi
 
 	# Deal with angle first
-	if abs(angleDiff) > maxAngleOffset:
-		if angleDiff > math.pi/2:
-			zOmegaMag = 2
-		elif angleDiff > math.pi/8:
-			zOmegaMag = 2
-		else:
-			zOmegaMag = 0.5
+	degToRad = math.pi / 180
+	angleDiffAbs = abs(angleDiff)
 
-		zOmega = numpy.sign(angleDiff) * zOmegaMag
-		newTwist = generateTwist(0,0,0,0,0,zOmega)
-		pub_RosbotVel.publish(newTwist)
+	if angleDiffAbs > 45 * degToRad:
+		zOmegaMag = 90 * degToRad
+	elif angleDiffAbs > 20 * degToRad:
+		zOmegaMag = 60 * degToRad
+	elif angleDiffAbs > 5 * degToRad:
+		zOmegaMag = 25 * degToRad
+	else:
+		zOmegaMag = 5 * degToRad
 
-		rospy.loginfo("Current Angle: %.2f, Target Angle: %.2f, Z-Omega: %.2f",yaw,targetAngle,zOmega)
-		return
-	
-	posOffset = Vector3(targetWaypoint.x - position.x, targetWaypoint.y - position.y, targetWaypoint.z - position.z)
-	distance = math.sqrt(math.pow(posOffset.x,2) + math.pow(posOffset.x,2))
+	zOmega = numpy.sign(angleDiff) * zOmegaMag
 
-	if distance > maxLinearOffset:
-		xVel = moveSpeed
-		newTwist = generateTwist(xVel,0,0,0,0,0)
-		pub_RosbotVel.publish(newTwist)
+	distance = math.sqrt(math.pow(posOffset.x,2) + math.pow(posOffset.y,2))
 
-		rospy.loginfo("Current Distance: %.2f", distance)
-		return
+	if angleDiffAbs > 30*degToRad or distance < 0.1:
+		xVel = 0
+	else:
+		xVel = (1-angleDiffAbs/90) * distance * 0.5
+		#xVel = min(xVel,0.5)
 
-	pub_RosbotVel.publish(twistZero)
-	rospy.loginfo("At target waypoint.")
+	newTwist = generateTwist(xVel,0,0,0,0,zOmega)
+	pub_RosbotVel.publish(newTwist)
+
+	#rospy.loginfo("AngleDiff [deg]: %.2f, zOmega [deg]: %.2f", angleDiff/degToRad, zOmega/degToRad)
+	rospy.loginfo("AngleDiffAbs [deg]: %.2f, Distance: %.2f, xVel: %.8f", angleDiffAbs/degToRad, distance, xVel)
 	return
 
 
