@@ -5,6 +5,7 @@ from geometry_msgs.msg import Twist, PoseStamped, Pose, Point, Quaternion, Vecto
 from tf.transformations import euler_from_quaternion
 import math
 import numpy
+from PID import PID
 
 """
 Quad1 Corner: 2.440, -1.800, 0.098
@@ -28,6 +29,10 @@ Size of room: 4.2, 3.6, 0
 
 # init variable to store /Rosbot01/pose
 recentPose = None
+distancePID = None
+anglePID = None
+
+degToRad = math.pi / 180
 
 def callback_Rosbot01Pose(data):
 	global recentPose
@@ -47,6 +52,8 @@ def waitForPoseData():
 
 
 def waypointMove(pub_RosbotVel, targetWaypoint):
+	global distancePID, anglePID
+
 	turnSpeed = 2
 	moveSpeed = 0.5
 	maxAngleOffset = 0 #15 * math.pi/180 # radians
@@ -68,41 +75,31 @@ def waypointMove(pub_RosbotVel, targetWaypoint):
 	targetAngle = math.atan2(posOffset.y, posOffset.x)
 	targetAngle = (targetAngle+2*math.pi) % (2*math.pi)
 
+	# Deal with angle
 	angleDiff = targetAngle - yaw
 	angleDiff = ((angleDiff + math.pi) % (2*math.pi)) - math.pi
-
-	# Deal with angle first
-	degToRad = math.pi / 180
 	angleDiffAbs = abs(angleDiff)
-
-	if angleDiffAbs > 45 * degToRad:
-		zOmegaMag = 90 * degToRad
-	elif angleDiffAbs > 20 * degToRad:
-		zOmegaMag = 60 * degToRad
-	elif angleDiffAbs > 5 * degToRad:
-		zOmegaMag = 25 * degToRad
+	anglePIDMag = anglePID.step(angleDiff,rospy.get_time())
+	zOmega = deadzone(anglePIDMag,0.2*degToRad)
+	
+	# Deal with distance
+	if angleDiffAbs < 20*degToRad:
+		distance = math.sqrt(math.pow(posOffset.x,2) + math.pow(posOffset.y,2))
+		distancePIDMag = distancePID.step(distance,rospy.get_time())
+		xVel = deadzone(distancePIDMag,0.05)
 	else:
-		zOmegaMag = 5 * degToRad
-
-	zOmega = numpy.sign(angleDiff) * zOmegaMag
-
-	distance = math.sqrt(math.pow(posOffset.x,2) + math.pow(posOffset.y,2))
-
-	if angleDiffAbs > 30*degToRad or distance < 0.1:
 		xVel = 0
-	else:
-		xVel = (1-angleDiffAbs/90) * distance * 0.5
-		#xVel = min(xVel,0.5)
 
+	# Create and publish twist
 	newTwist = generateTwist(xVel,0,0,0,0,zOmega)
 	pub_RosbotVel.publish(newTwist)
-
-	#rospy.loginfo("AngleDiff [deg]: %.2f, zOmega [deg]: %.2f", angleDiff/degToRad, zOmega/degToRad)
-	rospy.loginfo("AngleDiffAbs [deg]: %.2f, Distance: %.2f, xVel: %.8f", angleDiffAbs/degToRad, distance, xVel)
+	rospy.loginfo("ZOmega: %.2f [deg/s], XVel: %.2f",zOmega/degToRad,xVel)
 	return
 
 
 def waypointControl():
+	global distancePID, anglePID
+
 	# initialize node
 	rospy.init_node('waypointControl', anonymous = True)
 	rospy.loginfo("WaypointControl Node Started!")
@@ -110,6 +107,9 @@ def waypointControl():
 	rospy.Subscriber("/Rosbot01/pose", PoseStamped, callback_Rosbot01Pose)
 	# Setup /cmd_vel publisher
 	pub_RosbotVel = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
+	# Init PID controllers
+	distancePID = PID(0.3,0,0)
+	anglePID = PID(4,0,0.5)
 
 	# Wait for pose data before continuing
 	waitForPoseData()
@@ -125,15 +125,16 @@ def waypointControl():
 		modTime = elapsedTime % (4*waypointDelay)
 
 		if modTime < 1*waypointDelay:
-			targetWaypoint = Vector3(0.3+2.1, 0-1.8, 0)
+			targetWaypoint = Vector3(0.3+1.4, 0-1.2, 0)
 		elif modTime < 2*waypointDelay:
-			targetWaypoint = Vector3(0.3+2.1, 0+1.8, 0)
+			targetWaypoint = Vector3(0.3+1.4, 0+1.2, 0)
 		elif modTime < 3*waypointDelay:
-			targetWaypoint = Vector3(0.3-2.1, 0+1.8, 0)
+			targetWaypoint = Vector3(0.3-1.4, 0+1.2, 0)
 		elif modTime < 4*waypointDelay:
-			targetWaypoint = Vector3(0.3-2.1, 0-1.8, 0)
+			targetWaypoint = Vector3(0.3-1.4, 0-1.2, 0)
 
 		waypointMove(pub_RosbotVel, targetWaypoint)
+		#pub_RosbotVel.publish(generateTwist(0,0,0,0,0,180*degToRad))
 
 		rate.sleep()
 
@@ -143,6 +144,23 @@ def generateTwist(xVel, yVel, zVel, xOmega, YOmega, ZOmega):
 	newAngular = Vector3(xOmega, YOmega, ZOmega)
 	newTwist = Twist(newLinear, newAngular)
 	return newTwist
+
+def remap(x, xmin, xmax, ymin, ymax):
+	if(x <= xmin):
+		return ymin
+	if(x >= xmax):
+		return ymax
+	return (x-xmin)/(xmax-xmin)*(ymax-ymin) + ymin
+
+def deadzone(x, xmin):
+	if x < xmin and x > -xmin:
+		return 0
+	return x 
+
+def publishRosBot(xVel, zOmega):
+	goodXVel = 1
+	goodZOmegaVel = 2
+	pub_RosbotVel.publish(msg)
 
 
 if __name__ == '__main__':
