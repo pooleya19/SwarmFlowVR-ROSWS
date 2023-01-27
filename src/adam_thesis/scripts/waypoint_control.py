@@ -31,6 +31,7 @@ Size of room: 4.2, 3.6, 0
 recentPose = None
 distancePID = None
 anglePID = None
+targetWaypoint = None
 
 degToRad = math.pi / 180
 
@@ -38,6 +39,9 @@ def callback_Rosbot01Pose(data):
 	global recentPose
 	recentPose = data
 
+def callback_targetWaypoint(data):
+	global targetWaypoint
+	targetWaypoint = data
 
 def waitForPoseData():
 	# Wait for pose data before continuing
@@ -83,10 +87,11 @@ def waypointMove(pub_RosbotVel, targetWaypoint):
 	zOmega = deadzone(anglePIDMag,0.2*degToRad)
 	
 	# Deal with distance
-	if angleDiffAbs < 20*degToRad:
+	if angleDiffAbs < 50*degToRad:
 		distance = math.sqrt(math.pow(posOffset.x,2) + math.pow(posOffset.y,2))
 		distancePIDMag = distancePID.step(distance,rospy.get_time())
 		xVel = deadzone(distancePIDMag,0.05)
+		xVel = min(xVel, 0.7)
 	else:
 		xVel = 0
 
@@ -98,7 +103,12 @@ def waypointMove(pub_RosbotVel, targetWaypoint):
 
 
 def waypointControl():
-	global distancePID, anglePID
+	global distancePID, anglePID, targetWaypoint
+
+	# configure parameters
+	listenForWaypoints = True
+	customWaypointDelay = 10 #seconds
+
 
 	# initialize node
 	rospy.init_node('waypointControl', anonymous = True)
@@ -108,33 +118,37 @@ def waypointControl():
 	# Setup /cmd_vel publisher
 	pub_RosbotVel = rospy.Publisher("/cmd_vel", Twist, queue_size=1)
 	# Init PID controllers
-	distancePID = PID(0.3,0,0)
+	distancePID = PID(0.7,0,0)
 	anglePID = PID(4,0,0.5)
+	# Setup /targetWaypoint subscriber
+	if listenForWaypoints:
+		rospy.Subscriber("/targetWaypoint", Vector3, callback_targetWaypoint)
 
 	# Wait for pose data before continuing
 	waitForPoseData()
 
 	startTime = rospy.get_time()
-	targetWaypoint = None
-	waypointDelay = 10 # seconds
 
 	rate = rospy.Rate(20)
 	while not rospy.is_shutdown():
-		currentTime = rospy.get_time()
-		elapsedTime = currentTime-startTime
-		modTime = elapsedTime % (4*waypointDelay)
+		if not listenForWaypoints:
+			currentTime = rospy.get_time()
+			elapsedTime = currentTime-startTime
+			modTime = elapsedTime % (4*customWaypointDelay)
 
-		if modTime < 1*waypointDelay:
-			targetWaypoint = Vector3(0.3+1.4, 0-1.2, 0)
-		elif modTime < 2*waypointDelay:
-			targetWaypoint = Vector3(0.3+1.4, 0+1.2, 0)
-		elif modTime < 3*waypointDelay:
-			targetWaypoint = Vector3(0.3-1.4, 0+1.2, 0)
-		elif modTime < 4*waypointDelay:
-			targetWaypoint = Vector3(0.3-1.4, 0-1.2, 0)
+			if modTime < 1*customWaypointDelay:
+				targetWaypoint = Vector3(0.3+1.4, 0-1.2, 0)
+			elif modTime < 2*customWaypointDelay:
+				targetWaypoint = Vector3(0.3+1.4, 0+1.2, 0)
+			elif modTime < 3*customWaypointDelay:
+				targetWaypoint = Vector3(0.3-1.4, 0+1.2, 0)
+			elif modTime < 4*customWaypointDelay:
+				targetWaypoint = Vector3(0.3-1.4, 0-1.2, 0)
 
-		waypointMove(pub_RosbotVel, targetWaypoint)
-		#pub_RosbotVel.publish(generateTwist(0,0,0,0,0,180*degToRad))
+		if targetWaypoint != None:
+			waypointMove(pub_RosbotVel, targetWaypoint)
+		else:
+			rospy.loginfo("Waypoint is none.")
 
 		rate.sleep()
 
