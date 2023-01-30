@@ -25,8 +25,10 @@
             #refresh_tracker_frequency: 1.0
             trackers:
             - Rosbot01
+            - cf2
         </rosparam>
         <remap from="/vrpn_client_node/Rosbot01/pose" to="/Rosbot01/pose"/>
+        <remap from="/vrpn_client_node/cf2/pose" to="/cf2/pose"/>
     </node>
 
     <!--node name="waypointControl" pkg="adam_thesis" type="waypoint_control.py" output="screen"/-->
