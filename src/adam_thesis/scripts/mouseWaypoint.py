@@ -10,7 +10,7 @@ def mouseWaypoint():
 	# initialize node
 	rospy.init_node('mouseWaypoint', anonymous = True)
 	# Setup /targetWaypoint publisher
-	pub_targetWaypoint = rospy.Publisher("targetWaypoint", Vector3, queue_size=1)
+	pub_targetWaypoint = rospy.Publisher("/rosbot02/targetWaypoint", Vector3, queue_size=1)
 	rate = rospy.Rate(10) # 10hz
 		
 	# Get Display Dependent Parameters

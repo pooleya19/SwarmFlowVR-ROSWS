@@ -11,6 +11,7 @@ class ROSBotHandler:
 	def __init__(self, name):
 		self.name = name
 		self.recentPose = None
+		self.sequenceNum = 0
 		self.distancePID = None
 		self.anglePID = None
 		self.targetWaypoint = None
@@ -19,11 +20,12 @@ class ROSBotHandler:
 		self.battery = None
 
 		# ===== Init parameters =====
+		self.degToRad = math.pi/180
 		# Movement parameters
 		self.turnSpeed = 2
 		self.moveSpeed = 0.5
-		self.maxAngleOffset = 0 #15 * math.pi/180 # radians
-		self.maxLinearOffset = 0.2 #m?
+		self.maxAngleOffset = 50*self.degToRad # radians
+		self.minLinearOffset = 0.3 #m?
 		# Timeout
 		self.waypointTimeout = 0.5 # [seconds], stop moving if no waypoints after this amount of time
 
@@ -44,7 +46,11 @@ class ROSBotHandler:
 		rospy.loginfo("Handler [%s] Started!", self.name)
 
 	def callback_pose(self, data):
-		self.recentPose = data
+		header = data.header
+		seq = header.seq
+		if seq > self.sequenceNum:
+			self.sequenceNum = seq
+			self.recentPose = data
 		# rospy.loginfo("Received pose data")
 
 	def callback_targetWaypoint(self, data):
@@ -77,17 +83,25 @@ class ROSBotHandler:
 		targetAngle = math.atan2(posOffset.y, posOffset.x)
 		targetAngle = (targetAngle+2*math.pi) % (2*math.pi)
 
-		# Deal with angle
-		degToRad = math.pi / 180
+		# Calculate distance
+		distance = math.sqrt(math.pow(posOffset.x,2) + math.pow(posOffset.y,2))
+
+		# Calculate angle
 		angleDiff = targetAngle - yaw
 		angleDiff = ((angleDiff + math.pi) % (2*math.pi)) - math.pi
 		angleDiffAbs = abs(angleDiff)
-		anglePIDMag = self.anglePID.step(angleDiff,rospy.get_time())
-		zOmega = self.deadzone(anglePIDMag,0.2*degToRad)
+
+		rospy.loginfo("Distance=%.3f, angleDiff=%.3f", distance, angleDiff)
+
+		# Deal with angle
+		if distance > self.minLinearOffset:
+			anglePIDMag = self.anglePID.step(angleDiff,rospy.get_time())
+			zOmega = self.deadzone(anglePIDMag,0.2*self.degToRad)
+		else:
+			zOmega = 0
 
 		# Deal with distance
-		if angleDiffAbs < 50*degToRad:
-			distance = math.sqrt(math.pow(posOffset.x,2) + math.pow(posOffset.y,2))
+		if angleDiffAbs < self.maxAngleOffset:
 			distancePIDMag = self.distancePID.step(distance,rospy.get_time())
 			xVel = self.deadzone(distancePIDMag,0.05)
 			xVel = min(xVel, 0.7)
@@ -97,7 +111,7 @@ class ROSBotHandler:
 		# Create and publish twist
 		newTwist = self.generateTwist(xVel,0,0,0,0,zOmega)
 		self.pub_RosbotVel.publish(newTwist)
-		rospy.loginfo("Handler [%s]:  ZOmega: %.2f [deg/s], XVel: %.2f", self.name, zOmega/degToRad, xVel)
+		rospy.loginfo("Handler [%s]:  ZOmega: %.2f [deg/s], XVel: %.2f", self.name, zOmega/self.degToRad, xVel)
 		return
 
 	def getVoltage(self):

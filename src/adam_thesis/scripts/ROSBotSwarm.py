@@ -58,7 +58,10 @@ def main():
 					#rospy.loginfo("NumPositions = %.2f, Dist = %.2f",len(currentPositions), distance)
 					#rospy.loginfo("Dist: %.3f", distance)
 					if distance < closeThreshold:
-						rospy.logerr("ROSBOTS TOO CLOSE.")
+						rospy.logerr("ROSBOTS TOO CLOSE. CurrentPos=<%.2f,%2.f,%.2f>. OtherPos=<%.2f,%.2f,%.2f>. Dist=%.2f.",
+							currentPosition.x, currentPosition.y, currentPosition.z,
+							otherPosition.x, otherPosition.y, otherPosition.z,
+							distance)
 						tooClose = True
 						
 				currentPositions.append(currentPosition)
@@ -70,6 +73,12 @@ def main():
 				battery = round(battery,2)
 			batteryMsg += "[" + botHandler.name + "] " + str(battery) + " V,  "
 		rospy.loginfo(batteryMsg)
+		# Log position and target position
+		if False:
+			pos = botHandler2.getPosition()
+			tpos = botHandler2.targetWaypoint
+			if pos != None and tpos != None:
+				rospy.loginfo("rosbot02: pos = <%.3f, %.3f, %.3f>, targetPos = <%.3f, %.3f, %.3f>", pos.x, pos.y, pos.z, tpos.x, tpos.y, tpos.z)
 
 		if tooClose:
 			tooCloseCount += 1
