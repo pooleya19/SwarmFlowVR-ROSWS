@@ -1,11 +1,9 @@
 ﻿<launch>
-
 	<include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch">
 		<arg name="port" value="9090"/>
 	</include>
 
 	<node name="file_server" pkg="file_server" type="file_server" output="screen"/>
-
 
     <arg name="mocap_server" default="192.168.1.202"/>
 
@@ -26,11 +24,11 @@
             trackers:
             - rosbot01
             - rosbot02
-            - cf2
+            - rosbot03
         </rosparam>
         <remap from="/vrpn_client_node/rosbot01/pose" to="/Rosbot01/pose"/>
         <remap from="/vrpn_client_node/rosbot02/pose" to="/Rosbot02/pose"/>
-        <remap from="/vrpn_client_node/cf2/pose" to="/cf2/pose"/>
+        <remap from="/vrpn_client_node/rosbot03/pose" to="/rosbot03/pose"/>
     </node>
 
     <!--node name="waypointControl" pkg="adam_thesis" type="waypoint_control.py" output="screen"/-->

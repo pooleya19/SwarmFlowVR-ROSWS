@@ -7,7 +7,7 @@ from Xlib import display
 from Xlib.ext import randr
 import math
 
-def twoCircleWaypoint():
+def circleWaypoint():
 	# Define parameters
 	roomCenter_x = 0.3
 	roomCenter_y = 0
@@ -19,11 +19,11 @@ def twoCircleWaypoint():
 	rosRefreshRate = 10 #Hz
 
 	# Define rosbot names
-	rosbotNames = ["rosbot01", "rosbot02"]
+	rosbotNames = ["rosbot01", "rosbot02", "rosbot03"]
 
 
 	# Initialize node
-	rospy.init_node('twoCircleWaypoint', anonymous = True)
+	rospy.init_node('circleWaypoint', anonymous = True)
 
 	# Initialize publishers
 	publishers = []
@@ -41,7 +41,7 @@ def twoCircleWaypoint():
 
 		for i in range(0,numBots):
 			publisher = publishers[i]
-			phaseOffset = 2*math.pi / len(publishers) * i
+			phaseOffset = 2*math.pi / numBots * i
 			omega = 2*math.pi/period
 
 			targetX = roomCenter_x + roomSize_x/2 * math.cos(omega * currentTime + phaseOffset)
@@ -54,6 +54,5 @@ def twoCircleWaypoint():
 
 		rate.sleep()
 
-
 if __name__ == '__main__':
-	twoCircleWaypoint()
+	circleWaypoint()

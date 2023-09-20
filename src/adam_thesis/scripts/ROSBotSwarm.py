@@ -35,9 +35,12 @@ def main():
 	rospy.loginfo("ROSBotSwarm Node Started!")
 
 	# Init ROSBots
-	botHandler1 = ROSBotHandler("rosbot01")
-	botHandler2 = ROSBotHandler("rosbot02")
-	botHandlers = [botHandler1, botHandler2]
+	rosbotNames = ["rosbot01", "rosbot02", "rosbot03"]
+	
+	botHandlers = []
+	for rosbotName in rosbotNames:
+		botHandler = ROSBotHandler(rosbotName)
+		botHandlers.append(botHandler)
 
 	startTime = rospy.get_time()
 
@@ -72,7 +75,8 @@ def main():
 			if type(battery) == float:
 				battery = round(battery,2)
 			batteryMsg += "[" + botHandler.name + "] " + str(battery) + " V,  "
-		rospy.loginfo(batteryMsg)
+		if len(batteryMsg) > 0:
+			rospy.loginfo(batteryMsg)
 		# Log position and target position
 		if False:
 			pos = botHandler2.getPosition()

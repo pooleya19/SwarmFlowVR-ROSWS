@@ -24,11 +24,11 @@
             trackers:
             - rosbot01
             - rosbot02
-            - cf2
+            - rosbot03
         </rosparam>
         <remap from="/vrpn_client_node/rosbot01/pose" to="/rosbot01/pose"/>
         <remap from="/vrpn_client_node/rosbot02/pose" to="/rosbot02/pose"/>
-        <remap from="/vrpn_client_node/cf2/pose" to="/cf2/pose"/>
+        <remap from="/vrpn_client_node/rosbot03/pose" to="/rosbot03/pose"/>
     </node>
 
     <node name="ROSBotSwarm" pkg="adam_thesis" type="ROSBotSwarm.py" output="screen"/>
