@@ -60,9 +60,12 @@ class ROSBotHandler:
 	def callback_battery(self, data):
 		self.battery = data.voltage
 
-	def waypointMove(self):
+	def waypointMove(self, freezeRobots):
+		#calOffset = Vector3(-0.3, 0, 0.16) # Offset due to calibration
+		calOffset = Vector3(0,0,0)
+
 		# Check if no waypoint or pose data
-		if self.targetWaypoint == None or self.recentPose == None:
+		if self.targetWaypoint == None or self.recentPose == None or freezeRobots:
 			self.stopMoving()
 			return
 		# Check for timeout
@@ -78,7 +81,7 @@ class ROSBotHandler:
 		yaw = (yaw+2*math.pi) % (2*math.pi)
 		#rospy.loginfo("RPY: (%.3f, %.3f, %.3f)", roll, pitch, yaw)
 
-		posOffset = Vector3(self.targetWaypoint.x - position.x, self.targetWaypoint.y - position.y, self.targetWaypoint.z - position.z)
+		posOffset = Vector3(self.targetWaypoint.x - (position.x - calOffset.x), self.targetWaypoint.y - (position.y - calOffset.y), self.targetWaypoint.z - (position.z - calOffset.z))
 
 		targetAngle = math.atan2(posOffset.y, posOffset.x)
 		targetAngle = (targetAngle+2*math.pi) % (2*math.pi)

@@ -48,6 +48,7 @@ def main():
 
 	rate = rospy.Rate(20)
 	manualShutdown = False
+	freezeRobots = False
 	while not rospy.is_shutdown() and not manualShutdown:
 		batteryMsg = ""
 		currentPositions = []
@@ -69,7 +70,7 @@ def main():
 						
 				currentPositions.append(currentPosition)
 
-			botHandler.waypointMove()
+			botHandler.waypointMove(freezeRobots)
 
 			battery = botHandler.getVoltage()
 			if type(battery) == float:
@@ -90,7 +91,10 @@ def main():
 			tooCloseCount = 0
 
 		if tooCloseCount > 5:
-			manualShutdown = True
+			#manualShutdown = True
+			freezeRobots = True
+		else:
+			freezeRobots = False
 
 		rate.sleep()
 
