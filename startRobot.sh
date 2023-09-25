@@ -13,4 +13,7 @@ if [ "$1" != "" ]; then
 else
 	echo "Usage: startRobot.sh [ROSbot alias]"
 fi
+# Each startRosbot.sh script on the ROSbots should perform same functionality as last few lines of ~/.bashrc
+# i.e. define ROS_IP and ROS_MASTER and source the ROS distribution and the ROS workspace
+
 # roslaunch ~/husarion_ws/src/husarion_ros/launch/rosbot_drivers_pro.launch
