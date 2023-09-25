@@ -17,7 +17,7 @@ roslaunch /src/adam_thesis/launch/rosbot_swarm_control.launch
 ```
 
 ## High-Level Description
-- Each ROSbot is managed by a waypoint handler. The waypoint handler's job is to give the ROSbot velocity commands to move the ROSbot from its current position/orientation to the target waypoint position.
+- Each ROSbot is managed by a [waypoint handler](/src/adam_thesis/scripts/ROSBotWaypointHandler.py). The waypoint handler's job is to give the ROSbot velocity commands to move the ROSbot from its current position/orientation to the target waypoint position.
 - The waypoint handler receives target waypoint positions from the [VR counter-part](https://github.com/pooleya19/SwarmFlowVR-Unity) of SwarmFlowVR.
 - The waypoint handler receives position/orientation from the mocap server.
 - The [ROSBotSwarm.py](/src/adam_thesis/scripts/ROSBotSwarm.py) script: 
